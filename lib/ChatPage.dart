@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter_beep/flutter_beep.dart';
 import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:io';
@@ -30,12 +31,12 @@ class _Message {
   _Message(this.whom, this.text);
 }
 
-class _ChatPage extends State<ChatPage> {
+class _ChatPage extends State<ChatPage> with SingleTickerProviderStateMixin{
   var tList = List.generate(100, (i) => List.filled(5, "", growable: true),
       growable: true);
 
   // List<String> attendance = ['13', '14', '15', '16'];
-  List<String> attendance = ['0', '1', '2', '3'];
+  List<String> attendance = ['0', '1', '2', '3','4'];
 
   // List<String> attendance = [];
   bool isValid = true;
@@ -44,14 +45,16 @@ class _ChatPage extends State<ChatPage> {
   List<int> buffer = [];
   int last = 0;
   int latest = 0;
+  int _activeTabIndex = 1;
   List<_Message> messages = List<_Message>.empty(growable: true);
   String _messageBuffer = '';
   bool isConnecting = true;
+  late TabController _tabController;
 
   bool get isConnected => (connection?.isConnected ?? false);
   bool isDisconnecting = false;
 
-  // late final SharedPreferences prefs;
+  late final SharedPreferences prefs;
   // FirebaseStorage storage = FirebaseStorage.instance;
   int mycount = 0;
   late Directory documentDirectory;
@@ -79,7 +82,7 @@ class _ChatPage extends State<ChatPage> {
     File imageFile = File(pickedImage!.path);
     await imageFile.copy('$mypath/images/$fileName.jpg');
     mycount++;
-    // await prefs.setInt('counter', mycount);
+    await prefs.setInt('counter', mycount);
     downloadData();
     setState(() {});
     // try {
@@ -137,20 +140,30 @@ class _ChatPage extends State<ChatPage> {
     // await storage.ref(ref).delete();
     setState(() {});
   }
-
+  // void _setActiveTabIndex() {
+  //   _activeTabIndex = _tabController.index;
+  // }
   Future<void> myinitials() async {
     tList[0][0] = "YAHYA";
-    tList[0][1] = "ND";
-    tList[1][0] = "AHMED";
-    tList[1][1] = "ND";
-    tList[2][0] = "ADNAN";
-    tList[2][1] = "ND";
-    tList[3][0] = "NONE";
-    tList[3][1] = "ND";
+    tList[0][1] = "VERIFIED";
     tList[0][2] = "JAFFERI";
-    tList[1][2] = "ZAHEER";
-    tList[2][2] = "ISMAIL";
 
+    tList[1][0] = "AHMED";
+    tList[1][1] = "VERIFIED";
+    tList[1][2] = "ZAHEER";
+
+    tList[2][0] = "ADNAN";
+    tList[2][1] = "VERIFIED";
+    tList[2][2] = "ASIF";
+
+    tList[3][0] = "OSAMA";
+    tList[3][1] = "VERIFIED";
+    tList[3][2] = "ISMAIL";
+
+    tList[4][0] = "AHSAN";
+    tList[4][1] = "VERIFIED";
+    tList[4][2] = "BASHIR";
+//5 ammar //6wahaj
     // tList[15][2] = "ASIF";
     // tList[16][2] = "NONE";
     // tList[17][2] = "NONE";
@@ -167,14 +180,14 @@ class _ChatPage extends State<ChatPage> {
     // tList[15][2] = "ASIF";
     // tList[16][2] = "NONE";
     // tList[17][2] = "NONE";
-    // prefs = await SharedPreferences.getInstance();
+    prefs = await SharedPreferences.getInstance();
     documentDirectory = await getApplicationDocumentsDirectory();
     mypath = documentDirectory.path;
     downloadData();
-    // final int? counter = prefs.getInt('counter');
-    // if (counter != null) {
-    //   mycount = counter;
-    // }
+    final int? counter = prefs.getInt('counter');
+    if (counter != null) {
+      mycount = counter;
+    }
   }
 
   Future<List> downloadData() async {
@@ -189,6 +202,10 @@ class _ChatPage extends State<ChatPage> {
 
   @override
   void initState() {
+    _tabController = TabController(vsync: this, length: 2);
+    _tabController.addListener(() {
+      print("1asdasds");
+    });
     super.initState();
     myinitials();
     BluetoothConnection.toAddress(widget.server.address).then((_connection) {
@@ -217,6 +234,8 @@ class _ChatPage extends State<ChatPage> {
 
   @override
   void dispose() {
+    _tabController.dispose();
+
     // Avoid memory leak (`setState` after dispose) and disconnect
     if (isConnected) {
       isDisconnecting = true;
@@ -228,6 +247,7 @@ class _ChatPage extends State<ChatPage> {
 
   @override
   Widget build(BuildContext context) {
+
     final serverName = widget.server.name ?? "Unknown";
     print(tList[13][0]);
     return DefaultTabController(
@@ -235,17 +255,29 @@ class _ChatPage extends State<ChatPage> {
       child: Scaffold(
         appBar: AppBar(
           title: (isConnecting
-              ? Text('Connecting chat to ' + serverName + '...')
+              ? Text('Connecting ...')
               : isConnected
-                  ? Text('Live chat with ' + serverName)
+                  ? Text('Connected')
                   : Text('Chat log with ' + serverName)),
-          bottom: const TabBar(
+          bottom: TabBar(
+            controller: _tabController,
             tabs: [
-              Tab(icon: Icon(Icons.query_stats_sharp)),
-              Tab(icon: Icon(Icons.electric_bolt_sharp)),
+              Tab(text: "REGISTRATION"),
+              Tab(text: "MONITORING"),
             ],
           ),
         ),
+        floatingActionButton: FloatingActionButton(onPressed: () {
+          attendance.clear();
+          mycount = 0;
+          setState(() {
+            
+          });
+        },
+            child : Icon(Icons.clear)
+
+        )
+        ,
         body: TabBarView(
           children: [
             Container(
@@ -278,186 +310,299 @@ class _ChatPage extends State<ChatPage> {
                         } else {
                           return Center(
                             child: Container(
-                              padding: const EdgeInsets.fromLTRB(5, 15, 5, 5),
+
+                              padding: const EdgeInsets.fromLTRB(15, 5, 15, 5),
                               height: 1000,
-                              width: 1000,
                               child: SingleChildScrollView(
                                 child: Column(
                                   children: [
                                     for (File s in filelist) ...[
                                       Container(
-                                        height: 300,
-                                        padding: const EdgeInsets.only(
-                                            top: 30, right: 20, left: 20),
-                                        width:
-                                            MediaQuery.of(context).size.width *
-                                                0.94,
+                                        margin: EdgeInsets.only(top: 30),
+
                                         child: Card(
                                           shape: RoundedRectangleBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(20.0),
+                                            borderRadius: BorderRadius.circular(20.0),
                                           ),
                                           color: Colors.white70,
                                           elevation: 10,
-                                          child: Row(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                                            children: [
+                                          Row(
+                                            crossAxisAlignment: CrossAxisAlignment.center,
+                                            mainAxisAlignment: MainAxisAlignment.center,
                                             children: <Widget>[
+
                                               Padding(
-                                                  padding:
-                                                      const EdgeInsets.all(2.0),
+                                                  padding: const EdgeInsets.only(left: 15,right: 15,bottom: 15,top: 15),
                                                   child: ConstrainedBox(
                                                     constraints: BoxConstraints(
                                                       maxWidth:
-                                                          MediaQuery.of(context)
-                                                                  .size
-                                                                  .width *
-                                                              0.30,
+                                                      MediaQuery.of(context).size.width *
+                                                          0.30,
                                                       maxHeight:
-                                                          MediaQuery.of(context)
-                                                                  .size
-                                                                  .width *
-                                                              0.35,
+                                                      MediaQuery.of(context).size.height *
+                                                          0.175,
                                                     ),
                                                     child: ClipRRect(
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                              20.0),
-                                                      child: Image.file(
-                                                          File((s.path))),
+                                                      borderRadius: BorderRadius.circular(20.0),
+                                                      child: Image.file(File(s.path)),
                                                     ),
                                                   )),
                                               Column(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.start,
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                mainAxisAlignment: MainAxisAlignment.center,
                                                 children: <Widget>[
-                                                  Container(
-                                                    width:
-                                                        MediaQuery.of(context)
-                                                                .size
-                                                                .width *
-                                                            0.35,
-                                                    child: Padding(
-                                                      padding: const EdgeInsets
-                                                              .fromLTRB(
-                                                          10, 10, 0, 0),
-                                                      child: Text(
-                                                        tList[int.parse(path
-                                                            .basename(s.path)
-                                                            .substring(
-                                                                0,
-                                                                path
-                                                                        .basename(
-                                                                            s.path)
-                                                                        .length -
-                                                                    4))][0],
-                                                        style: const TextStyle(
-                                                          fontWeight:
-                                                              FontWeight.bold,
-                                                          fontSize: 18,
+                                                  Row(
+                                                    children: [
+                                                      Container(
+                                                        width: MediaQuery.of(context).size.width *
+                                                            0.25,
+                                                        child: const Padding(
+                                                          padding:
+                                                          EdgeInsets.fromLTRB(10, 10, 0, 0),
+                                                          child: Text(
+                                                            "Student ID:",
+                                                            style: TextStyle(
+                                                              fontWeight: FontWeight.bold,
+                                                              fontSize: 18,
+                                                            ),
+                                                          ),
                                                         ),
                                                       ),
-                                                    ),
+                                                      Container(
+                                                        width: MediaQuery.of(context).size.width *
+                                                            0.2,
+                                                        child: Padding(
+                                                          padding: const EdgeInsets.fromLTRB(
+                                                              10, 10, 0, 0),
+                                                          child: Text("000${path.basename(s.path).substring(0,path.basename(s.path).length -4)}",
+                                                            style: TextStyle(
+                                                              fontWeight: FontWeight.normal,
+                                                              fontSize: 18,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ],
                                                   ),
-                                                  Container(
-                                                    width:
-                                                        MediaQuery.of(context)
-                                                                .size
-                                                                .width *
-                                                            0.35,
-                                                    child: Padding(
-                                                      padding: const EdgeInsets
-                                                              .fromLTRB(
-                                                          5, 10, 0, 0),
-                                                      child: Text(
-                                                        'ss',
-                                                        // tList[int.parse(x.substring(0,x.length - 4))][1] = "VERIFIED";
-
-                                                        style: TextStyle(
-                                                          fontSize: 12,
+                                                  Row(
+                                                    children: [
+                                                      Container(
+                                                        width: MediaQuery.of(context).size.width *
+                                                            0.25,
+                                                        child: const Padding(
+                                                          padding:
+                                                          EdgeInsets.fromLTRB(10, 10, 0, 0),
+                                                          child: Text(
+                                                            "Student Name:",
+                                                            style: TextStyle(
+                                                              fontWeight: FontWeight.bold,
+                                                              fontSize: 18,
+                                                            ),
+                                                          ),
                                                         ),
                                                       ),
-                                                    ),
+                                                      Container(
+                                                        width: MediaQuery.of(context).size.width *
+                                                            0.2,
+                                                        child: Padding(
+                                                          padding: const EdgeInsets.fromLTRB(
+                                                              10, 10, 0, 0),
+                                                          child: Text(
+                                                            tList[int.parse(path.basename(s.path).substring(0,path.basename(s.path).length -4))][0],
+                                                            style: TextStyle(
+                                                              fontWeight: FontWeight.normal,
+                                                              fontSize: 18,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  Row(
+                                                    children: [
+                                                      Container(
+                                                        width: MediaQuery.of(context).size.width *
+                                                            0.25,
+                                                        child: const Padding(
+                                                          padding:
+                                                          EdgeInsets.fromLTRB(10, 10, 0, 0),
+                                                          child: Text(
+                                                            "Father/Guardian:",
+                                                            style: TextStyle(
+                                                              fontWeight: FontWeight.bold,
+                                                              fontSize: 18,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                      Container(
+                                                        width: MediaQuery.of(context).size.width *
+                                                            0.2,
+                                                        child: Padding(
+                                                          padding: const EdgeInsets.fromLTRB(
+                                                              10, 10, 0, 0),
+                                                          child: Text(
+                                                            tList[int.parse(path.basename(s.path).substring(0,path.basename(s.path).length -4))][2],
+                                                            style: TextStyle(
+                                                              fontWeight: FontWeight.normal,
+                                                              fontSize: 18,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  Row(
+                                                    children: [
+                                                      Container(
+                                                        width: MediaQuery.of(context).size.width *
+                                                            0.25,
+                                                        child: const Padding(
+                                                          padding:
+                                                          EdgeInsets.fromLTRB(10, 10, 0, 0),
+                                                          child: Text(
+                                                            "Class:",
+                                                            style: TextStyle(
+                                                              fontWeight: FontWeight.bold,
+                                                              fontSize: 18,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                      Container(
+                                                        width: MediaQuery.of(context).size.width *
+                                                            0.2,
+                                                        child: Padding(
+                                                          padding: const EdgeInsets.fromLTRB(
+                                                              10, 10, 0, 0),
+                                                          child: Text(
+                                                            "5A",
+                                                            style: TextStyle(
+                                                              fontWeight: FontWeight.normal,
+                                                              fontSize: 18,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ],
                                                   ),
                                                 ],
                                               ),
-                                              Column(
-                                                  mainAxisAlignment:
-                                                      MainAxisAlignment.center,
+                                              Padding(
+                                                padding: const EdgeInsets.only(left: 1),
+                                                child: Column(
                                                   children: [
-                                                    Transform.scale(
-                                                        scale: 2,
-                                                        child: Switch(
-                                                          onChanged: (value) {
-                                                            String x =
-                                                                path.basename(
-                                                                    s.path);
-                                                            print(x.substring(0,
-                                                                x.length - 4));
-
-                                                            setState(() {
-                                                              if (value) {
-                                                                tList[int.parse(x.substring(
-                                                                        0,
-                                                                        x.length -
-                                                                            4))]
-                                                                    [
-                                                                    1] = "VERIFIED";
-                                                              } else {
-                                                                tList[int.parse(x.substring(
-                                                                        0,
-                                                                        x.length -
-                                                                            4))][1] =
-                                                                    "DEFAULTER";
-                                                              }
-                                                            });
-                                                            // setState(() => isValid = value);
-                                                          },
-                                                          value: tList[int.parse(path
-                                                                      .basename(s
-                                                                          .path)
-                                                                      .substring(
-                                                                          0,
-                                                                          path.basename(s.path).length -
-                                                                              4))][1] ==
-                                                                  "VERIFIED"
-                                                              ? true
-                                                              : false,
-                                                          activeColor:
-                                                              Colors.green,
-                                                          activeTrackColor:
-                                                              Colors
-                                                                  .greenAccent,
-                                                          inactiveThumbColor:
-                                                              Colors.red,
-                                                          inactiveTrackColor:
-                                                              Colors.redAccent,
-                                                        )),
                                                     tList[int.parse(path
-                                                                .basename(
-                                                                    s.path)
-                                                                .substring(
-                                                                    0,
-                                                                    path.basename(s.path).length -
-                                                                        4))][1] ==
+                                                        .basename(
+                                                        s.path)
+                                                        .substring(
+                                                        0,
+                                                        path.basename(s.path).length -
+                                                            4))][1] ==
+                                                        "VERIFIED"
+                                                        ? Container(
+                                                      decoration: BoxDecoration(
+                                                          color: Colors.green,
+                                                          borderRadius: BorderRadius.all(Radius.circular(20))
+                                                      ),
+                                                      height: 40,
+                                                      width: 120,
+                                                      padding: EdgeInsets.all(5),
+                                                      child: Center(
+                                                        child: Text(
+                                                          'VERIFIED',
+                                                          style: TextStyle(
+                                                              fontSize: 18),
+                                                        ),
+                                                      ),
+                                                    )
+                                                        : Container(
+                                                      decoration: BoxDecoration(
+                                                          color: Colors.red,
+                                                          borderRadius: BorderRadius.all(Radius.circular(20))
+                                                      ),
+                                                      height: 40,
+                                                      width: 140,
+                                                      padding: EdgeInsets.all(5),
+                                                      margin: EdgeInsets.only(right: 5),
+                                                      child: Center(
+                                                        child: Text(
+                                                          'DEFAULTER',
+                                                          style: TextStyle(
+                                                              fontSize: 18),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                    Transform.scale(
+                                                      scale: 1.5,
+                                                      child: Switch(
+                                                        onChanged: (value) {
+                                                          String x =
+                                                          path.basename(
+                                                              s.path);
+                                                          print(x.substring(0,
+                                                              x.length - 4));
+
+                                                          setState(() {
+                                                            if (value) {
+                                                              tList[int.parse(x.substring(
+                                                                  0,
+                                                                  x.length -
+                                                                      4))]
+                                                              [
+                                                              1] = "VERIFIED";
+                                                            } else {
+                                                              tList[int.parse(x.substring(
+                                                                  0,
+                                                                  x.length -
+                                                                      4))][1] =
+                                                              "DEFAULTER";
+                                                            }
+                                                          });
+                                                          // setState(() => isValid = value);
+                                                        },
+                                                        value: tList[int.parse(path
+                                                            .basename(s
+                                                            .path)
+                                                            .substring(
+                                                            0,
+                                                            path.basename(s.path).length -
+                                                                4))][1] ==
                                                             "VERIFIED"
-                                                        ? Text(
-                                                            'VERIFIED',
-                                                            style: TextStyle(
-                                                                fontSize: 20),
-                                                          )
-                                                        : Text(
-                                                            'DEFAULTER',
-                                                            style: TextStyle(
-                                                                fontSize: 20),
-                                                          )
-                                                  ]),
+                                                            ? true
+                                                            : false,
+                                                        activeColor:
+                                                        Colors.green,
+                                                        activeTrackColor:
+                                                        Colors
+                                                            .greenAccent,
+                                                        inactiveThumbColor:
+                                                        Colors.red,
+                                                        inactiveTrackColor:
+                                                        Colors.redAccent,
+                                                      ),
+                                                    ),
+                                                        IconButton(onPressed: () async {
+                                                          await File(s.path).delete();
+                                                          setState(() {
+
+                                                          });
+                                                        }, icon: Icon(Icons.delete_forever))
+                                                  ],
+                                                ),
+                                              ),
                                             ],
+
+                                          ),
+                                              ]
                                           ),
                                         ),
                                       )
-                                    ]
                                   ],
+                                  ]
                                 ),
                               ),
                             ),
@@ -469,13 +614,13 @@ class _ChatPage extends State<ChatPage> {
                 ],
               ),
             ),
-            SizedBox(
-              width: 500,
-              child: ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: attendance.length,
-                  itemBuilder: (BuildContext context, int index) {
-                    return UnconstrainedBox(
+            ListView.builder(
+                shrinkWrap: true,
+                itemCount: attendance.length,
+                itemBuilder: (BuildContext context, int index) {
+                  return UnconstrainedBox(
+                    child: Container(
+                      margin: EdgeInsets.all(10),
                       child: Card(
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(20.0),
@@ -484,13 +629,45 @@ class _ChatPage extends State<ChatPage> {
                         elevation: 10,
                         child: Stack(
                             children: [
+                              tList[int.parse(attendance[index])][1] == "VERIFIED"?
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  SizedBox(
+                                    height: 220,
+                                    width: 750,
+                                  ),
+                                  Card(
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.only(
+                                          bottomRight: Radius.circular(20),
+                                          bottomLeft: Radius.circular(20)),
+                                    ),
+                                    color: Colors.green,
+                                    child: SizedBox(
+                                      width: 750,
+                                      height: 60,
+                                      child: Center(
+                                        child: Text(
+                                          "${tList[int.parse(attendance[index])][1]}",
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 18,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  )
+                                ],
+                              ):
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.center,
                             mainAxisAlignment: MainAxisAlignment.end,
                             children: [
                               SizedBox(
-                                height: 190,
-                                width: 500,
+                                height: 220,
+                                width: 750,
                               ),
                               Card(
                                 shape: RoundedRectangleBorder(
@@ -499,11 +676,17 @@ class _ChatPage extends State<ChatPage> {
                                         bottomLeft: Radius.circular(20)),
                                 ),
                                 color: Colors.red,
-                                child: Text(
-                                  "${tList[int.parse(attendance[index])][1]}",
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 18,
+                                child: SizedBox(
+                                  width: 750,
+                                  height: 60,
+                                  child: Center(
+                                    child: Text(
+                                      "${tList[int.parse(attendance[index])][1]}",
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 18,
+                                      ),
+                                    ),
                                   ),
                                 ),
                               )
@@ -532,7 +715,7 @@ class _ChatPage extends State<ChatPage> {
                                   )),
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisAlignment: MainAxisAlignment.center,
+                                mainAxisAlignment: MainAxisAlignment.start,
                                 children: <Widget>[
                                   Row(
                                     children: [
@@ -670,28 +853,18 @@ class _ChatPage extends State<ChatPage> {
                                       ),
                                     ],
                                   ),
+                                  SizedBox(
+                                    height: 50,
+                                  )
                                 ],
                               ),
-                              // Column(
-                              //   children: <Widget>[
-                              //     Padding(
-                              //       padding: const EdgeInsets.fromLTRB(5, 40, 0, 0),
-                              //       child: Text(
-                              //         '\$ 24.00',
-                              //         style: TextStyle(
-                              //           fontSize: 14,
-                              //         ),
-                              //       ),
-                              //     ),
-                              //   ],
-                              // ),
                             ],
                           ),
                         ]),
                       ),
-                    );
-                  }),
-            ),
+                    ),
+                  );
+                }),
           ],
         ),
       ),
@@ -705,7 +878,11 @@ class _ChatPage extends State<ChatPage> {
         _messageBuffer = utf8.decode(buffer);
         latest = int.parse(_messageBuffer);
         if (latest != last) {
-          attendance.insert(0, _messageBuffer);
+          if(latest == 0 || latest == 1 || latest == 2 || latest == 3 || latest ==4){
+            attendance.insert(0, _messageBuffer);
+            FlutterBeep.playSysSound(
+                AndroidSoundIDs.TONE_PROP_BEEP);
+          }
           if (attendance.length > 10) {
             attendance.removeAt(attendance.length - 1);
           }
@@ -720,3 +897,174 @@ class _ChatPage extends State<ChatPage> {
     });
   }
 }
+// Container(
+//   height: 300,
+//   padding: const EdgeInsets.only(
+//       top: 30, right: 20, left: 20),
+//   width:
+//       MediaQuery.of(context).size.width *
+//           0.94,
+//   child: Card(
+//     shape: RoundedRectangleBorder(
+//       borderRadius:
+//           BorderRadius.circular(20.0),
+//     ),
+//     color: Colors.white70,
+//     elevation: 10,
+//     child: Row(
+//       crossAxisAlignment:
+//           CrossAxisAlignment.start,
+//       children: <Widget>[
+//         Padding(
+//             padding:
+//                 const EdgeInsets.all(2.0),
+//             child: ConstrainedBox(
+//               constraints: BoxConstraints(
+//                 maxWidth:
+//                     MediaQuery.of(context)
+//                             .size
+//                             .width *
+//                         0.30,
+//                 maxHeight:
+//                     MediaQuery.of(context)
+//                             .size
+//                             .width *
+//                         0.35,
+//               ),
+//               child: ClipRRect(
+//                 borderRadius:
+//                     BorderRadius.circular(
+//                         20.0),
+//                 child: Image.file(
+//                     File((s.path))),
+//               ),
+//             )),
+//         Column(
+//           crossAxisAlignment:
+//               CrossAxisAlignment.start,
+//           children: <Widget>[
+//             Container(
+//               width:
+//                   MediaQuery.of(context)
+//                           .size
+//                           .width *
+//                       0.35,
+//               child: Padding(
+//                 padding: const EdgeInsets
+//                         .fromLTRB(
+//                     10, 10, 0, 0),
+//                 child: Text(
+//                   tList[int.parse(path
+//                       .basename(s.path)
+//                       .substring(
+//                           0,
+//                           path
+//                                   .basename(
+//                                       s.path)
+//                                   .length -
+//                               4))][0],
+//                   style: const TextStyle(
+//                     fontWeight:
+//                         FontWeight.bold,
+//                     fontSize: 18,
+//                   ),
+//                 ),
+//               ),
+//             ),
+//             Container(
+//               width:
+//                   MediaQuery.of(context)
+//                           .size
+//                           .width *
+//                       0.35,
+//               child: Padding(
+//                 padding: const EdgeInsets
+//                         .fromLTRB(
+//                     5, 10, 0, 0),
+//                 child: Text(
+//                   'ss',
+//                   // tList[int.parse(x.substring(0,x.length - 4))][1] = "VERIFIED";
+//
+//                   style: TextStyle(
+//                     fontSize: 12,
+//                   ),
+//                 ),
+//               ),
+//             ),
+//           ],
+//         ),
+//         Column(
+//             mainAxisAlignment:
+//                 MainAxisAlignment.center,
+//             children: [
+//               Transform.scale(
+//                   scale: 2,
+//                   child: Switch(
+//                     onChanged: (value) {
+//                       String x =
+//                           path.basename(
+//                               s.path);
+//                       print(x.substring(0,
+//                           x.length - 4));
+//
+//                       setState(() {
+//                         if (value) {
+//                           tList[int.parse(x.substring(
+//                                   0,
+//                                   x.length -
+//                                       4))]
+//                               [
+//                               1] = "VERIFIED";
+//                         } else {
+//                           tList[int.parse(x.substring(
+//                                   0,
+//                                   x.length -
+//                                       4))][1] =
+//                               "DEFAULTER";
+//                         }
+//                       });
+//                       // setState(() => isValid = value);
+//                     },
+//                     value: tList[int.parse(path
+//                                 .basename(s
+//                                     .path)
+//                                 .substring(
+//                                     0,
+//                                     path.basename(s.path).length -
+//                                         4))][1] ==
+//                             "VERIFIED"
+//                         ? true
+//                         : false,
+//                     activeColor:
+//                         Colors.green,
+//                     activeTrackColor:
+//                         Colors
+//                             .greenAccent,
+//                     inactiveThumbColor:
+//                         Colors.red,
+//                     inactiveTrackColor:
+//                         Colors.redAccent,
+//                   )),
+//               tList[int.parse(path
+//                           .basename(
+//                               s.path)
+//                           .substring(
+//                               0,
+//                               path.basename(s.path).length -
+//                                   4))][1] ==
+//                       "VERIFIED"
+//                   ? Text(
+//                       'VERIFIED',
+//                       style: TextStyle(
+//                           fontSize: 20),
+//                     )
+//                   : Text(
+//                       'DEFAULTER',
+//                       style: TextStyle(
+//                           fontSize: 20),
+//                     )
+//             ]),
+//       ],
+//     ),
+//   ),
+// )
